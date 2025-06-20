@@ -11,9 +11,10 @@ import { useAppDispatch, useAppSelector } from "../redux/store";
 import { selectAllHexes } from "../redux/selectors";
 import MapMarker from "./MapMarker";
 import { useLayout } from "./LayoutContext";
-import HexLine, { Props as HexLineProps } from "./HexLine";
+import HexLine from "./HexLine";
+import styles from "./App.module.scss";
 import Point from "../lib/Point";
-import Hex from "../lib/Hex";
+import Hex, { HexLike } from "../lib/Hex";
 import { setPosition } from "../redux/map";
 import { applyEngine } from "../flower";
 import { addHex, asData } from "../redux/hexes";
@@ -44,7 +45,7 @@ export default function HexMap() {
     }
   }, []);
 
-  const [lineProps, setLineProps] = useState<HexLineProps>();
+  const [destination, setDestination] = useState<HexLike>();
   const onMouseMove = useCallback<MouseEventHandler>(
     (e) => {
       const transform = panZoomInstance?.getTransform() ?? {
@@ -72,24 +73,24 @@ export default function HexMap() {
       //   hex.toString()
       // );
 
-      if (hex.distance(position) === 1) setLineProps({ a: position, b: hex });
-      else setLineProps(undefined);
+      if (hex.distance(position) === 1) setDestination(hex);
+      else setDestination(undefined);
     },
     [layout, left, top, position, panZoomInstance]
   );
-  const onMouseOut = useCallback(() => setLineProps(undefined), []);
+  const onMouseOut = useCallback(() => setDestination(undefined), []);
 
   const onClick = useCallback(() => {
-    if (lineProps) {
-      const { q: bq, r: br, s: bs } = lineProps.b;
+    if (destination) {
+      const { q: bq, r: br, s: bs } = destination;
 
-      const comingFrom = new Hex(lineProps.a.q, lineProps.a.r, lineProps.a.s);
+      const comingFrom = new Hex(position.q, position.r, position.s);
       const goingTo = new Hex(bq, br, bs);
 
       const source = hexes.find((h) => comingFrom.equals(h));
-      const destination = hexes.find((h) => goingTo.equals(h));
+      const destinationData = hexes.find((h) => goingTo.equals(h));
 
-      if (source && !destination) {
+      if (source && !destinationData) {
         const newIndex = applyEngine(engine, source.index);
         const types = engine.types[newIndex];
         const newType = randomPick(types);
@@ -97,7 +98,7 @@ export default function HexMap() {
       }
       dispatch(setPosition({ q: bq, r: br, s: bs }));
     }
-  }, [dispatch, engine, hexes, lineProps]);
+  }, [destination, dispatch, engine, hexes, position]);
 
   return (
     <svg
@@ -116,7 +117,19 @@ export default function HexMap() {
         ))}
       </g>
       <MapMarker />
-      {lineProps && <HexLine {...lineProps} />}
+      {destination && (
+        <>
+          <HexDisplay
+            hex={{
+              ...destination,
+              id: "outline",
+              index: 0,
+              className: styles.outline,
+            }}
+          />
+          <HexLine a={position} b={destination} />
+        </>
+      )}
     </svg>
   );
 }

@@ -10,6 +10,18 @@
   }
 }
 
+.outline {
+  .shape {
+    fill: transparent;
+    stroke: silver;
+    stroke-width: 4;
+  }
+
+  .label {
+    display: none;
+  }
+}
+
 .plains {
   .shape {
     fill: #fff2cc;
