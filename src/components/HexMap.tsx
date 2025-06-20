@@ -1,0 +1,122 @@
+import {
+  MouseEventHandler,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import HexDisplay from "./HexDisplay";
+import panZoom, { PanZoom } from "panzoom";
+import { useAppDispatch, useAppSelector } from "../redux/store";
+import { selectAllHexes } from "../redux/selectors";
+import MapMarker from "./MapMarker";
+import { useLayout } from "./LayoutContext";
+import HexLine, { Props as HexLineProps } from "./HexLine";
+import Point from "../lib/Point";
+import Hex from "../lib/Hex";
+import { setPosition } from "../redux/map";
+import { applyEngine } from "../flower";
+import { addHex, asData } from "../redux/hexes";
+import { randomPick } from "../lib/maths";
+
+export default function HexMap() {
+  const [width] = useState(400);
+  const [height] = useState(400);
+  const [left] = useState(-200);
+  const [top] = useState(-200);
+
+  const dispatch = useAppDispatch();
+  const layout = useLayout();
+  const hexes = useAppSelector(selectAllHexes);
+  const engine = useAppSelector((s) => s.engine);
+  const position = useAppSelector((s) => s.map.position);
+  const [panZoomInstance, setPanZoomInstance] = useState<PanZoom>();
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  useEffect(() => {
+    if (svgRef.current) {
+      const instance = panZoom(svgRef.current);
+      setPanZoomInstance(instance);
+      return () => {
+        setPanZoomInstance(undefined);
+        instance.dispose();
+      };
+    }
+  }, []);
+
+  const [lineProps, setLineProps] = useState<HexLineProps>();
+  const onMouseMove = useCallback<MouseEventHandler>(
+    (e) => {
+      const transform = panZoomInstance?.getTransform() ?? {
+        x: 0,
+        y: 0,
+        scale: 1,
+      };
+
+      const client = new Point(e.clientX, e.clientY);
+      const view = client.add({ x: left, y: top });
+      const shift = view.subtract(transform);
+
+      // TODO this doesn't work yet
+      const scaled = shift.div(transform.scale);
+
+      const hex = layout.toHexRounded(scaled);
+
+      // console.clear();
+      // console.log(
+      //   transform,
+      //   client.toString(),
+      //   view.toString(),
+      //   shift.toString(),
+      //   scaled.toString(),
+      //   hex.toString()
+      // );
+
+      if (hex.distance(position) === 1) setLineProps({ a: position, b: hex });
+      else setLineProps(undefined);
+    },
+    [layout, left, top, position, panZoomInstance]
+  );
+  const onMouseOut = useCallback(() => setLineProps(undefined), []);
+
+  const onClick = useCallback(() => {
+    if (lineProps) {
+      const { q: bq, r: br, s: bs } = lineProps.b;
+
+      const comingFrom = new Hex(lineProps.a.q, lineProps.a.r, lineProps.a.s);
+      const goingTo = new Hex(bq, br, bs);
+
+      const source = hexes.find((h) => comingFrom.equals(h));
+      const destination = hexes.find((h) => goingTo.equals(h));
+
+      if (source && !destination) {
+        const newIndex = applyEngine(engine, source.index);
+        const types = engine.types[newIndex];
+        const newType = randomPick(types);
+        dispatch(addHex(asData(goingTo, newIndex, newType)));
+      }
+      dispatch(setPosition({ q: bq, r: br, s: bs }));
+    }
+  }, [dispatch, engine, hexes, lineProps]);
+
+  return (
+    <svg
+      ref={svgRef}
+      xmlns="http://www.w3.org/2000/svg"
+      height={height}
+      width={width}
+      viewBox={`${left} ${top} ${width} ${height}`}
+      onMouseMove={onMouseMove}
+      onMouseOut={onMouseOut}
+      onClick={onClick}
+    >
+      <g name="hexes">
+        {hexes.map((h) => (
+          <HexDisplay key={h.id} hex={h} />
+        ))}
+      </g>
+      <MapMarker />
+      {lineProps && <HexLine {...lineProps} />}
+    </svg>
+  );
+}
