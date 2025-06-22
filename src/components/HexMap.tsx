@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import HexDisplay from "./HexDisplay";
-import panZoom, { PanZoom } from "panzoom";
+import panZoom, { Transform } from "panzoom";
 import { useAppDispatch, useAppSelector } from "../redux/store";
 import { selectAllHexes } from "../redux/selectors";
 import MapMarker from "./MapMarker";
@@ -25,62 +25,45 @@ interface HexMapProps {
 }
 
 export default function HexMap({ className }: HexMapProps) {
-  const [width] = useState(400);
-  const [height] = useState(400);
-  const [left] = useState(-200);
-  const [top] = useState(-200);
-
   const dispatch = useAppDispatch();
   const layout = useLayout();
   const hexes = useAppSelector(selectAllHexes);
   const engine = useAppSelector((s) => s.engine);
   const position = useAppSelector((s) => s.map.position);
-  const [panZoomInstance, setPanZoomInstance] = useState<PanZoom>();
+  const [transform, setTransform] = useState<Transform>({
+    x: 0,
+    y: 0,
+    scale: 1,
+  });
 
-  const svgRef = useRef<SVGSVGElement>(null);
+  const svgRef = useRef<SVGGElement>(null);
   useEffect(() => {
     if (svgRef.current) {
-      const instance = panZoom(svgRef.current);
-      setPanZoomInstance(instance);
-      return () => {
-        setPanZoomInstance(undefined);
-        instance.dispose();
-      };
+      const instance = panZoom(svgRef.current, {
+        autocenter: true,
+        initialZoom: 1,
+      });
+
+      setTransform(instance.getTransform());
+      instance.on("pan", () => setTransform(instance.getTransform()));
+      instance.on("zoom", () => setTransform(instance.getTransform()));
+
+      return () => instance.dispose();
     }
   }, []);
 
   const [destination, setDestination] = useState<HexLike>();
   const onMouseMove = useCallback<MouseEventHandler>(
     (e) => {
-      const transform = panZoomInstance?.getTransform() ?? {
-        x: 0,
-        y: 0,
-        scale: 1,
-      };
-
-      const client = new Point(e.clientX, e.clientY);
-      const view = client.add({ x: left, y: top });
-      const shift = view.subtract(transform);
-
-      // TODO this doesn't work yet
-      const scaled = shift.div(transform.scale);
-
-      const hex = layout.toHexRounded(scaled);
-
-      // console.clear();
-      // console.log(
-      //   transform,
-      //   client.toString(),
-      //   view.toString(),
-      //   shift.toString(),
-      //   scaled.toString(),
-      //   hex.toString()
-      // );
+      const point = new Point(e.clientX, e.clientY)
+        .subtract(transform)
+        .div(transform.scale);
+      const hex = layout.toHexRounded(point);
 
       if (hex.distance(position) === 1) setDestination(hex);
       else setDestination(undefined);
     },
-    [layout, left, top, position, panZoomInstance]
+    [layout, position, transform]
   );
   const onMouseOut = useCallback(() => setDestination(undefined), []);
 
@@ -107,35 +90,33 @@ export default function HexMap({ className }: HexMapProps) {
 
   return (
     <svg
-      ref={svgRef}
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      height={height}
-      width={width}
-      viewBox={`${left} ${top} ${width} ${height}`}
       onMouseMove={onMouseMove}
       onMouseOut={onMouseOut}
       onClick={onClick}
     >
-      <g name="hexes">
-        {hexes.map((h) => (
-          <HexDisplay key={h.id} hex={h} showIcon showLabel />
-        ))}
+      <g ref={svgRef}>
+        <g name="hexes">
+          {hexes.map((h) => (
+            <HexDisplay key={h.id} hex={h} showIcon showLabel />
+          ))}
+        </g>
+        <MapMarker />
+        {destination && (
+          <>
+            <HexDisplay
+              hex={{
+                ...destination,
+                id: "outline",
+                index: 0,
+                className: styles.outline,
+              }}
+            />
+            <HexLine className={styles.travel} a={position} b={destination} />
+          </>
+        )}
       </g>
-      <MapMarker />
-      {destination && (
-        <>
-          <HexDisplay
-            hex={{
-              ...destination,
-              id: "outline",
-              index: 0,
-              className: styles.outline,
-            }}
-          />
-          <HexLine className={styles.travel} a={position} b={destination} />
-        </>
-      )}
     </svg>
   );
 }
