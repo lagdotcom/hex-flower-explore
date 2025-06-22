@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import Hex from "../lib/Hex";
 import classNames from "classnames";
 import { useLayout } from "./LayoutContext";
@@ -7,22 +7,34 @@ import { HexData } from "../redux/hexes";
 import { useAppSelector } from "../redux/store";
 import { selectIconsRecord } from "../redux/selectors";
 
-interface Props {
+export interface HexDisplayProps {
   hex: HexData;
+  className?: string;
+  scale?: number;
+  showIcon?: boolean;
+  showLabel?: boolean;
+  onClick?: (hex: HexData) => void;
 }
 
-export default function HexDisplay({ hex }: Props) {
+export default function HexDisplay({
+  hex,
+  className,
+  scale = 1,
+  showIcon = false,
+  showLabel = false,
+  onClick,
+}: HexDisplayProps) {
   const layout = useLayout();
   const icons = useAppSelector(selectIconsRecord);
 
-  const gClassName = useMemo(
-    () => classNames(styles.hex, hex.className),
-    [hex]
+  const combinedClassName = useMemo(
+    () => classNames(styles.hex, hex.className, className),
+    [className, hex]
   );
 
   const { lowest, transform, points, label, icon } = useMemo(() => {
     const centre = layout.toPixel(hex);
-    const transform = `translate(${centre.x}, ${centre.y})`;
+    const transform = `translate(${centre.x}, ${centre.y}) scale(${scale} ${scale})`;
 
     const corners = layout.getPolygonCorners({ q: 0, r: 0, s: 0 });
     const points = corners.map((p) => `${p.x},${p.y}`).join(" ");
@@ -32,13 +44,15 @@ export default function HexDisplay({ hex }: Props) {
     const { col, row } = new Hex(hex.q, hex.r, hex.s).toOffsetCoordinates();
     const label = `${col + 50}.${row + 50}`;
 
-    const icon: string | undefined = icons[hex.className]?.icon;
+    const icon = showIcon ? icons[hex.className]?.icon : undefined;
 
     return { centre, transform, lowest, points, label, icon };
-  }, [hex, icons, layout]);
+  }, [hex, icons, layout, scale, showIcon]);
+
+  const clicked = useCallback(() => onClick?.(hex), [hex, onClick]);
 
   return (
-    <g className={gClassName} transform={transform}>
+    <g className={combinedClassName} transform={transform} onClick={clicked}>
       <polygon className={styles.shape} points={points} />
       {icon && (
         <text
@@ -49,14 +63,16 @@ export default function HexDisplay({ hex }: Props) {
           {icon}
         </text>
       )}
-      <text
-        className={styles.label}
-        y={lowest.y}
-        alignmentBaseline="ideographic"
-        textAnchor="middle"
-      >
-        {label}
-      </text>
+      {showLabel && (
+        <text
+          className={styles.label}
+          y={lowest.y}
+          alignmentBaseline="ideographic"
+          textAnchor="middle"
+        >
+          {label}
+        </text>
+      )}
     </g>
   );
 }

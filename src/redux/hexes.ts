@@ -16,7 +16,7 @@ const slice = createSlice({
   name: "hexes",
   initialState,
   reducers: {
-    addHex: hexesAdapter.addOne,
+    addHex: hexesAdapter.upsertOne,
   },
 });
 
@@ -24,10 +24,14 @@ export const { addHex } = slice.actions;
 
 export default slice.reducer;
 
+export function getHexId({ q, r }: HexLike) {
+  return `${q},${r}`;
+}
+
 export function asData(
   { q, r, s }: HexLike,
   index: EngineIndex,
   className: string,
 ): HexData {
-  return { id: `${q},${r}`, q, r, s, index, className };
+  return { id: getHexId({ q, r, s }), q, r, s, index, className };
 }

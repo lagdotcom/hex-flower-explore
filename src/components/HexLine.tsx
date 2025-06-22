@@ -2,13 +2,13 @@ import { useMemo } from "react";
 import { HexLike } from "../lib/Hex";
 import { useLayout } from "./LayoutContext";
 
-export interface Props {
+export interface HexLineProps {
   a: HexLike;
   b: HexLike;
   className?: string;
 }
 
-export default function HexLine({ a, b, className }: Props) {
+export default function HexLine({ a, b, className }: HexLineProps) {
   const layout = useLayout();
   const { x1, y1, x2, y2 } = useMemo(() => {
     const { x: x1, y: y1 } = layout.toPixel(a);

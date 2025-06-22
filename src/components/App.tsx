@@ -4,7 +4,10 @@ import Point from "../lib/Point";
 import HexMap from "./HexMap";
 import LayoutContext from "./LayoutContext";
 
+import styles from "./App.module.scss";
+
 import { useMemo, useState } from "react";
+import EngineDisplay from "./EngineDisplay";
 
 export default function App() {
   const [hexSize] = useState(32);
@@ -14,9 +17,10 @@ export default function App() {
   );
 
   return (
-    <main>
+    <main className={styles.main}>
       <LayoutContext value={layout}>
-        <HexMap />
+        <EngineDisplay className={styles.engine} />
+        <HexMap className={styles.map} />
       </LayoutContext>
     </main>
   );

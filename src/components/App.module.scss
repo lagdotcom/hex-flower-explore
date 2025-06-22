@@ -1,12 +1,30 @@
+.engine {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
 .marker {
   fill: transparent;
   stroke-width: 4px;
   stroke: black;
+  pointer-events: none;
 }
 
 .travel {
   stroke-width: 4px;
   stroke: black;
+}
+
+.canHover:hover {
+  cursor: pointer;
+  filter: brightness(120%);
+}
+
+.dashed {
+  .shape {
+    stroke-dasharray: 4, 4;
+  }
 }
 
 .hex {
@@ -31,6 +49,8 @@
 }
 
 .outline {
+  cursor: help;
+
   .shape {
     fill: transparent;
     stroke: silver;

@@ -20,7 +20,11 @@ import { applyEngine } from "../flower";
 import { addHex, asData } from "../redux/hexes";
 import { randomPick } from "../lib/maths";
 
-export default function HexMap() {
+interface HexMapProps {
+  className?: string;
+}
+
+export default function HexMap({ className }: HexMapProps) {
   const [width] = useState(400);
   const [height] = useState(400);
   const [left] = useState(-200);
@@ -97,6 +101,7 @@ export default function HexMap() {
         dispatch(addHex(asData(goingTo, newIndex, newType)));
       }
       dispatch(setPosition({ q: bq, r: br, s: bs }));
+      setDestination(undefined);
     }
   }, [destination, dispatch, engine, hexes, position]);
 
@@ -104,6 +109,7 @@ export default function HexMap() {
     <svg
       ref={svgRef}
       xmlns="http://www.w3.org/2000/svg"
+      className={className}
       height={height}
       width={width}
       viewBox={`${left} ${top} ${width} ${height}`}
@@ -113,7 +119,7 @@ export default function HexMap() {
     >
       <g name="hexes">
         {hexes.map((h) => (
-          <HexDisplay key={h.id} hex={h} />
+          <HexDisplay key={h.id} hex={h} showIcon showLabel />
         ))}
       </g>
       <MapMarker />
