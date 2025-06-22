@@ -127,7 +127,7 @@ export default function HexMap() {
               className: styles.outline,
             }}
           />
-          <HexLine a={position} b={destination} />
+          <HexLine className={styles.travel} a={position} b={destination} />
         </>
       )}
     </svg>

@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import engine from "./engine";
 import hexes from "./hexes";
+import icons from "./icons";
 import map from "./map";
 
-const reducer = combineReducers({ engine, hexes, map });
+const reducer = combineReducers({ engine, hexes, icons, map });
 
 export function createStore(preloadedState: Partial<RootState>) {
   return configureStore({ reducer, preloadedState });
